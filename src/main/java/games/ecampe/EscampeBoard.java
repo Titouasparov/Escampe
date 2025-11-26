@@ -8,7 +8,8 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 public class EscampeBoard implements Partie1 {
 
@@ -330,8 +331,54 @@ public class EscampeBoard implements Partie1 {
     @Override
     public String[] possiblesMoves(String player) {
         // TODO : Générer tous les coups valides pour 'player'
-        return new String[0];
+        ArrayList<String> possibleMoves = new ArrayList<>();
+        for (int y = 0; y < 6; y++) {
+            for (int x = 0; x < 6; x++) {
+                int piece = getPiece(x, y);
+                if ((player.equals("blanc") && piece > 0) || (player.equals("noir") && piece < 0)) {
+                    //pièce du joueur courant
+                    String current_pos = "" + (char)('A' + x) + (6 - y);
+                    computePossibleMoves(current_pos,current_pos,lisereCourant,possibleMoves, new HashSet<>());
+                }
+            }
+        }
+        return possibleMoves.toArray(new String[0]);
     }
+
+    private void computePossibleMoves(String from, String current_pos, int lisereCount, ArrayList<String> possibleMoves, HashSet<String> visited) {
+        if (lisereCount < 0) return;
+        String move = from+'-'+current_pos;
+        if (lisereCount == 0 && isValidMove(from, current_pos) && !visited.contains(move)) {
+            possibleMoves.add(move);
+            visited.add(move);
+        }
+        String[] neighbors = getNeighbors(current_pos);
+        for (String n:neighbors){
+            computePossibleMoves(from,n,lisereCount-1,possibleMoves,visited);
+        }
+    }
+
+    private String[] getNeighbors(String pos) {
+        char col = pos.charAt(0); // lettre colonne
+        int row = Integer.parseInt(pos.substring(1)); // chiffre ligne
+
+        char minCol = 'A', maxCol = 'F';
+        int minRow = 1, maxRow = 6;
+
+        ArrayList<String> neighbors = new ArrayList<>();
+
+        // gauche
+        if (col > minCol) neighbors.add("" + (char)(col - 1) + row);
+        // droite
+        if (col < maxCol) neighbors.add("" + (char)(col + 1) + row);
+        // haut
+        if (row > minRow) neighbors.add("" + col + (row - 1));
+        // bas
+        if (row < maxRow) neighbors.add("" + col + (row + 1));
+
+        return neighbors.toArray(new String[0]);
+    }
+
 
     @Override
     public void play(String move, String player) {

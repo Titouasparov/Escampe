@@ -5,7 +5,4 @@ package iialib.games.model;
  * It has to be implemented by some class in a real game
  */
 public interface IMove {
-	
-	
-	
 }

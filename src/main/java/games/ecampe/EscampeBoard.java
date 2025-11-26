@@ -12,21 +12,24 @@ import java.util.Arrays;
 
 public class EscampeBoard implements Partie1 {
 
-    // --- ATTRIBUTS STATIQUES (Le Plateau) ---
-
+    // --- CONSTANTES ---
+    // LE PLATEAU
     // Représentation des liserés du plateau (1, 2, ou 3).
-    // Note : L'orientation dépend de votre lecture (Ligne 0 = Haut ou Bas ?).
-    // Ici, j'assume que l'indice 0 correspond à la ligne 1 (Bas) et l'indice 5 à la ligne 6 (Haut),
-    // conformément à la logique "bas en haut" décrite pour les fichiers[cite: 462].
-    // À VÉRIFIER VISUELLEMENT AVEC LE PLATEAU PHYSIQUE.
     private static final int[][] LISERES = {
-            {1, 2, 2, 3, 1, 2}, // Ligne 1 (A1 -> F1)
-            {3, 1, 3, 1, 3, 2}, // Ligne 2
-            {2, 3, 1, 2, 1, 3}, // Ligne 3
-            {2, 1, 3, 2, 3, 1}, // Ligne 4
-            {1, 3, 1, 3, 1, 2}, // Ligne 5
-            {3, 2, 2, 1, 3, 2}  // Ligne 6 (A6 -> F6)
+            {1, 2, 2, 3, 1, 2}, //A
+            {3, 1, 3, 1, 3, 2},
+            {2, 3, 1, 2, 1, 3},
+            {2, 1, 3, 2, 3, 1},
+            {1, 3, 1, 3, 1, 2},
+            {3, 2, 2, 1, 3, 2}
     };
+
+    //LES PIECES
+    public static final int VIDE = 0;
+    public static final int PALADIN_BLANC = 1;
+    public static final int LICORNE_BLANCHE = 2;
+    public static final int PALADIN_NOIR = -1;
+    public static final int LICORNE_NOIRE = -2;
 
     // --- ATTRIBUTS DYNAMIQUES (L'État du jeu) ---
 
@@ -48,10 +51,35 @@ public class EscampeBoard implements Partie1 {
         // Initialisation d'un plateau vide 6x6
         this.posPieces = new int[6][6];
         this.lisereCourant = 0; // Pas de contrainte au début
-        this.joueurCourant = "blanc"; // Par défaut, les blancs commencent (règle 2) [cite: 414]
+        this.joueurCourant = "blanc"; // Par défaut, les blancs commencent
     }
 
-    // --- MÉTHODES DE L'INTERFACE PARTIEL ---
+    // --- GETTERS ET VERIFICATIONS ---
+
+    // Récupère le type de liseré pour une coordonnée (x=colonne, y=ligne)
+    // ATTENTION : y=0 correspond ici à la ligne du haut du plateau
+    public int getLisere(int x, int y) {
+        if (isValidCoordinate(x, y)) {
+            return LISERES[y][x];
+        }
+        return -1; // Erreur
+    }
+
+    // Récupère la pièce sur une case (1,2,-1,-2 ou 0)
+    // De meme : y=0 correspond ici à la ligne du haut du plateau
+    public int getPiece(int x, int y) {
+        if (isValidCoordinate(x, y)) {
+            return posPieces[y][x];
+        }
+        return 0; // Considéré vide si hors bornes
+    }
+
+    // Vérifie si une coordonnée est dans le plateau
+    public boolean isValidCoordinate(int x, int y) {
+        return x >= 0 && x < 6 && y >= 0 && y < 6;
+    }
+
+    // --- MÉTHODES DE L'INTERFACE ---
 
     @Override
     public void setFromFile(String fileName) {

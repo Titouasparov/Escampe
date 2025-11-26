@@ -346,12 +346,20 @@ public class EscampeBoard implements Partie1 {
     }
 
     private void computePossibleMoves(String from, String current_pos, int lisereCount, ArrayList<String> possibleMoves, HashSet<String> visited) {
+        int[] coords = parseCoordinate(current_pos);
+        //si une piece est sur le chemin et qu'on regarde une case differente de la case de depart
+        if (posPieces[coords[0]][coords[1]] != VIDE && !from.equals(current_pos)) {
+            return;
+        }
+        //si on a depasse la distance
         if (lisereCount < 0) return;
         String move = from+'-'+current_pos;
+        //si le coup est valide on l'ajoute
         if (lisereCount == 0 && isValidMove(from, current_pos) && !visited.contains(move)) {
             possibleMoves.add(move);
             visited.add(move);
         }
+        //sinon on continue la recherche en profondeur
         String[] neighbors = getNeighbors(current_pos);
         for (String n:neighbors){
             computePossibleMoves(from,n,lisereCount-1,possibleMoves,visited);

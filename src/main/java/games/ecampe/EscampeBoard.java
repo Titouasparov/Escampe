@@ -485,7 +485,7 @@ public class EscampeBoard implements Partie1 {
         // Fichier de test
         String filename = "test_input.txt";
 
-        // 1. Lecture
+        // TESTS DE LECTURES
         board.setFromFile(filename);
         System.out.println("Fichier " + filename + " lu.");
 
@@ -500,7 +500,7 @@ public class EscampeBoard implements Partie1 {
         int pieceC4 = board.getPiece(2, 2);
         System.out.println("Case C4 (Attendu: 2) : " + pieceC4 + (pieceC4 == 2 ? " [OK]" : " [ERREUR]"));
 
-        // 3. Sauvegarde pour vérifier
+        // TEST DE SAUVEGARDE
         board.saveToFile("test_output.txt");
         System.out.println("Sauvegarde effectuée dans test_output.txt");
     }

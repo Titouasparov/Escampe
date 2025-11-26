@@ -478,20 +478,30 @@ public class EscampeBoard implements Partie1 {
 
     // --- PROGRAMME PRINCIPAL ---
 
-    // --- PROGRAMME PRINCIPAL DE TEST ---
     public static void main(String[] args) {
         EscampeBoard board = new EscampeBoard();
-        System.out.println("--- Test Partie 6 : GameOver ---");
+        System.out.println("--- Test Chargement Fichier ---");
 
-        // 1. Simulation d'un plateau avec les deux licornes
-        board.posPieces[0][0] = LICORNE_NOIRE;
-        board.posPieces[5][5] = LICORNE_BLANCHE;
-        System.out.println("Deux licornes présentes -> GameOver ? " + board.gameOver());
-        // Attendu : false
+        // Fichier de test
+        String filename = "test_input.txt";
 
-        // 2. Simulation d'une capture (on supprime la licorne blanche)
-        board.posPieces[5][5] = VIDE;
-        System.out.println("Licorne blanche capturée -> GameOver ? " + board.gameOver());
-        // Attendu : true
+        // 1. Lecture
+        board.setFromFile(filename);
+        System.out.println("Fichier " + filename + " lu.");
+
+        // 2. Vérifications
+        // Case A6 (Haut Gauche, index 0,0) -> Doit être -1 (Paladin Noir 'n')
+        int pieceA6 = board.getPiece(0, 0);
+        System.out.println("Case A6 (Attendu: -1) : " + pieceA6 + (pieceA6 == -1 ? " [OK]" : " [ERREUR]"));
+        // Case E1 (Bas Droite, index 4,5) -> Doit être -2 (Licorne Noire 'N')
+        int pieceE1 = board.getPiece(4, 5);
+        System.out.println("Case E1 (Attendu: -2) : " + pieceE1 + (pieceE1 == -2 ? " [OK]" : " [ERREUR]"));
+        // Case C4 (Milieu, index 2,2) -> Doit être 2 (Licorne Blanche 'B')
+        int pieceC4 = board.getPiece(2, 2);
+        System.out.println("Case C4 (Attendu: 2) : " + pieceC4 + (pieceC4 == 2 ? " [OK]" : " [ERREUR]"));
+
+        // 3. Sauvegarde pour vérifier
+        board.saveToFile("test_output.txt");
+        System.out.println("Sauvegarde effectuée dans test_output.txt");
     }
 }

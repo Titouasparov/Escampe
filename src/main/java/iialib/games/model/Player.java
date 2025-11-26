@@ -51,6 +51,5 @@ public class Player<Role extends IRole> {
 	public String toString() {
 		return "" + role + ( id.isEmpty() ? "" : " (" + id + ")");
 	}
-	
 
 }

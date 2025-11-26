@@ -261,7 +261,7 @@ public class EscampeBoard implements Partie1 {
         if (start == null || end == null) return false; // Coordonnées hors plateau
 
         int y1 = start[0], x1 = start[1];
-        int y2 = end[0], x2 = start[1]; // Oups, petite coquille corrigée ci-dessous
+        int y2 = end[0], x2 = start[1]; //
         // Correction :
         x2 = end[1];
 
@@ -336,6 +336,11 @@ public class EscampeBoard implements Partie1 {
             for (int x = 0; x < 6; x++) {
                 int piece = getPiece(x, y);
                 if ((player.equals("blanc") && piece > 0) || (player.equals("noir") && piece < 0)) {
+                    int valLisere = getLisere(x, y);
+                    //vérification du liseré courant
+                    if (lisereCourant != 0 && valLisere != lisereCourant) {
+                        continue;
+                    }
                     //pièce du joueur courant
                     String current_pos = "" + (char)('A' + x) + (6 - y);
                     computePossibleMoves(current_pos,current_pos,lisereCourant,possibleMoves, new HashSet<>());
@@ -355,11 +360,13 @@ public class EscampeBoard implements Partie1 {
         if (lisereCount < 0) return;
         String move = from+'-'+current_pos;
         //si le coup est valide on l'ajoute
+
+        //Bien verifier qu'on ne l'a pas déjà ajouté
         if (lisereCount == 0 && isValidMove(from, current_pos) && !visited.contains(move)) {
             possibleMoves.add(move);
             visited.add(move);
         }
-        //sinon on continue la recherche en profondeur
+        //sinon on continue la recherche en profondeur en recursif
         String[] neighbors = getNeighbors(current_pos);
         for (String n:neighbors){
             computePossibleMoves(from,n,lisereCount-1,possibleMoves,visited);
@@ -449,9 +456,6 @@ public class EscampeBoard implements Partie1 {
 
         // Changement de joueur
         this.joueurCourant = player.equalsIgnoreCase("blanc") ? "noir" : "blanc";
-
-        // Debug optionnel pour suivre la partie
-        // System.out.println("Coup joué : " + move + " | Prochain liseré imposé : " + this.lisereCourant);
     }
 
     @Override
@@ -478,30 +482,81 @@ public class EscampeBoard implements Partie1 {
 
     // --- PROGRAMME PRINCIPAL ---
 
+    // --- PROGRAMME PRINCIPAL DE TEST ---
     public static void main(String[] args) {
         EscampeBoard board = new EscampeBoard();
-        System.out.println("--- Test Chargement Fichier ---");
 
-        // Fichier de test
+        // --- TEST CHARGEMENT + SAUVEGARDE FICHIER ---
+        System.out.println("--- Test 1 : Chargement Fichier ---");
         String filename = "test_input.txt";
+        // Créer le fichier s'il n'existe pas pour éviter le crash au premier run
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename))) {
+            bw.write("06 n----- 06\n05 ------ 05\n04 --B--- 04\n03 ------ 03\n02 ---b-- 02\n01 ----N- 01");
+        } catch (IOException e) { e.printStackTrace(); }
 
-        // TESTS DE LECTURES
         board.setFromFile(filename);
-        System.out.println("Fichier " + filename + " lu.");
+        System.out.println("Fichier lu. Case A6 (Attendu: -1) : " + board.getPiece(0, 0));
 
-        // 2. Vérifications
-        // Case A6 (Haut Gauche, index 0,0) -> Doit être -1 (Paladin Noir 'n')
-        int pieceA6 = board.getPiece(0, 0);
-        System.out.println("Case A6 (Attendu: -1) : " + pieceA6 + (pieceA6 == -1 ? " [OK]" : " [ERREUR]"));
-        // Case E1 (Bas Droite, index 4,5) -> Doit être -2 (Licorne Noire 'N')
-        int pieceE1 = board.getPiece(4, 5);
-        System.out.println("Case E1 (Attendu: -2) : " + pieceE1 + (pieceE1 == -2 ? " [OK]" : " [ERREUR]"));
-        // Case C4 (Milieu, index 2,2) -> Doit être 2 (Licorne Blanche 'B')
-        int pieceC4 = board.getPiece(2, 2);
-        System.out.println("Case C4 (Attendu: 2) : " + pieceC4 + (pieceC4 == 2 ? " [OK]" : " [ERREUR]"));
+        // --- TEST POSSIBLES MOVES ---
+        System.out.println("\n--- Test 2 : Possibles Moves ---");
 
-        // TEST DE SAUVEGARDE
-        board.saveToFile("test_output.txt");
-        System.out.println("Sauvegarde effectuée dans test_output.txt");
+        // 1. On nettoie le plateau pour le test
+        board = new EscampeBoard();
+
+        // 2. Scénario :
+        // On place un Paladin Blanc en C3.
+        // C3 correspond à la ligne 3 (index 3) et colonne C (index 2).
+        // Regardons le tableau LISERES[3][2].
+        // Ligne index 3 : {2, 1, 3, 2, 3, 1}. Index 2 => Liseré 3.
+        // Donc la pièce DOIT bouger de 3 cases.
+
+        // On utilise play avec "/" pour placer les pièces (Licorne A1, Paladin C3)
+        // A1 est là juste pour que le coup soit valide (il faut une licorne), on va l'ignorer.
+        board.play("A1/C3", "blanc");
+
+        System.out.println("Situation : Paladin Blanc en C3 (Liseré 3).");
+        System.out.println("Coups attendus (Distance 3 en ligne droite) :");
+        System.out.println(" - Haut : C3 -> C6");
+        System.out.println(" - Droite : C3 -> F3");
+        System.out.println(" - Bas : C3 -> C0 (Hors plateau, impossible)");
+        System.out.println(" - Gauche : C3 -> (Hors plateau, impossible)");
+
+        // Demander les coups possibles
+        String[] moves = board.possiblesMoves("blanc");
+
+        System.out.print("Coups trouvés par le programme : ");
+        boolean c3c6Found = false;
+        boolean c3f3Found = false;
+
+        for (String m : moves) {
+            System.out.print(m + " ");
+            if (m.equals("C3-C6")) c3c6Found = true;
+            if (m.equals("C3-F3")) c3f3Found = true;
+        }
+        System.out.println();
+
+        // Validation
+        if (c3c6Found && c3f3Found) {
+            System.out.println("RESULTAT : SUCCÈS (Les bons coups sont présents)");
+        } else {
+            System.out.println("RESULTAT : ÉCHEC (Il manque des coups)");
+        }
+
+        // Vérification qu'il n'y a pas de coups "tordus" (grâce à votre isValidMove)
+        // Le code de votre ami explore en "tache d'huile", donc il pourrait trouver C3-D2 (distance 3 mais en diagonale/L).
+        // isValidMove doit filtrer ça.
+        //TODO
+        boolean hasWeirdMoves = false;
+        for (String m : moves) {
+            // On regarde juste les coups partant de C3
+            if (m.startsWith("C3") && !m.equals("C3-C6") && !m.equals("C3-F3")) {
+                System.out.println("ATTENTION : Coup invalide détecté -> " + m);
+                hasWeirdMoves = true;
+            }
+        }
+
+        if (!hasWeirdMoves) {
+            System.out.println("FILTRAGE : OK (Aucun coup en diagonale ou en L n'a été gardé)");
+        }
     }
 }

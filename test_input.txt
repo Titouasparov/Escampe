@@ -1,12 +1,6 @@
-% Test de chargement pour Escampe
-% Format: NumeroLigne Contenu NumeroLigne
-% Rappel: 01 est en BAS, 06 est en HAUT
-
 06 n----- 06
 05 ------ 05
 04 --B--- 04
 03 ------ 03
 02 ---b-- 02
 01 ----N- 01
-
-% Fin du fichier

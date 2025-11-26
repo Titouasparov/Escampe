@@ -382,23 +382,108 @@ public class EscampeBoard implements Partie1 {
 
     @Override
     public void play(String move, String player) {
-        // TODO : Mettre à jour posPieces et lisereCourant
-        System.out.println("Joueur " + player + " joue " + move);
+        // 1. Gestion du coup "E" (Passe son tour)
+        // Règle 5 : Si un joueur passe, l'autre récupère la main et joue ce qu'il veut (liseré libre).
+        if (move.equals("E")) {
+            this.lisereCourant = 0;
+            this.joueurCourant = player.equalsIgnoreCase("blanc") ? "noir" : "blanc";
+            return;
+        }
+
+        // 2. Gestion du placement initial (ex: "C6/A6/B5/D5/E6/F5")
+        // Règle 1 & 2 : Utilisé en début de partie pour placer les pièces.
+        if (move.contains("/")) {
+            String[] positions = move.split("/");
+
+            // La première coordonnée est toujours celle de la Licorne
+            int[] licorneCoord = parseCoordinate(positions[0]);
+            int licorneVal = player.equalsIgnoreCase("blanc") ? LICORNE_BLANCHE : LICORNE_NOIRE;
+            if (licorneCoord != null) {
+                posPieces[licorneCoord[0]][licorneCoord[1]] = licorneVal;
+            }
+
+            // Les coordonnées suivantes sont celles des Paladins
+            int paladinVal = player.equalsIgnoreCase("blanc") ? PALADIN_BLANC : PALADIN_NOIR;
+            for (int i = 1; i < positions.length; i++) {
+                int[] palCoord = parseCoordinate(positions[i]);
+                if (palCoord != null) {
+                    posPieces[palCoord[0]][palCoord[1]] = paladinVal;
+                }
+            }
+
+            // Après une phase de placement, le jeu commence (ou continue) sans contrainte immédiate.
+            // (Si Noir vient de placer, Blanc placera. Si Blanc vient de placer, il jouera le premier coup LIBREMENT ).
+            this.lisereCourant = 0;
+            this.joueurCourant = player.equalsIgnoreCase("blanc") ? "noir" : "blanc";
+            return;
+        }
+
+        // 3. Coup standard "Départ-Arrivée" (ex: "B2-D2")
+        String[] parts = move.split("-");
+        int[] start = parseCoordinate(parts[0]);
+        int[] end = parseCoordinate(parts[1]);
+
+        // On récupère la pièce qui bouge
+        int piece = posPieces[start[0]][start[1]];
+
+        // On vide la case de départ
+        posPieces[start[0]][start[1]] = VIDE;
+
+        // On pose la pièce sur la case d'arrivée
+        // Note : Si la case contenait une Licorne adverse, elle est écrasée (capturée).
+        // La validation (isValidMove) garantit déjà qu'on ne mange pas un Paladin.
+        posPieces[end[0]][end[1]] = piece;
+
+        // 4. Mise à jour du Liseré Imposé pour le PROCHAIN coup
+        // Règle 3: "la pièce jouée doit partir d'une case ayant le même liseré que celle
+        // sur laquelle l'autre joueur a posé sa propre pièce au tour précédent."
+        this.lisereCourant = LISERES[end[0]][end[1]];
+
+        // Changement de joueur
+        this.joueurCourant = player.equalsIgnoreCase("blanc") ? "noir" : "blanc";
+
+        // Debug optionnel pour suivre la partie
+        // System.out.println("Coup joué : " + move + " | Prochain liseré imposé : " + this.lisereCourant);
     }
 
     @Override
     public boolean gameOver() {
-        // TODO : Vérifier la présence des deux licornes (2 et -2)
-        return false;
+        boolean licorneBlancheEnVie = false;
+        boolean licorneNoireEnVie = false;
+
+        // On parcourt tout le plateau pour chercher les licornes
+        for (int y = 0; y < 6; y++) {
+            for (int x = 0; x < 6; x++) {
+                int piece = posPieces[y][x];
+
+                if (piece == LICORNE_BLANCHE) {
+                    licorneBlancheEnVie = true;
+                } else if (piece == LICORNE_NOIRE) {
+                    licorneNoireEnVie = true;
+                }
+            }
+        }
+
+        // La partie est finie si l'une des deux licornes n'est plus sur le plateau
+        return !(licorneBlancheEnVie && licorneNoireEnVie);
     }
 
     // --- PROGRAMME PRINCIPAL ---
 
+    // --- PROGRAMME PRINCIPAL DE TEST ---
     public static void main(String[] args) {
         EscampeBoard board = new EscampeBoard();
-        System.out.println("Plateau initialisé.");
+        System.out.println("--- Test Partie 6 : GameOver ---");
 
-        // Test simple d'affichage (temporaire)
-        System.out.println("Liseré en A1 (0,0) : " + LISERES[0][0]);
+        // 1. Simulation d'un plateau avec les deux licornes
+        board.posPieces[0][0] = LICORNE_NOIRE;
+        board.posPieces[5][5] = LICORNE_BLANCHE;
+        System.out.println("Deux licornes présentes -> GameOver ? " + board.gameOver());
+        // Attendu : false
+
+        // 2. Simulation d'une capture (on supprime la licorne blanche)
+        board.posPieces[5][5] = VIDE;
+        System.out.println("Licorne blanche capturée -> GameOver ? " + board.gameOver());
+        // Attendu : true
     }
 }

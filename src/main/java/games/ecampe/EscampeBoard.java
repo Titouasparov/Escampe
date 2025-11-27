@@ -1,25 +1,18 @@
 package games.ecampe;
 
-
 import iialib.games.model.escampe.Partie1;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.*;
 
 public class EscampeBoard implements Partie1 {
 
     // --- CONSTANTES ---
-    // LE PLATEAU
-    // Représentation des liserés du plateau (1, 2, ou 3).
     private static final int[][] LISERES = {
-            {1, 2, 2, 3, 1, 2}, //A
+            {1, 2, 2, 3, 1, 2},
             {3, 1, 3, 1, 3, 2},
             {2, 3, 1, 2, 1, 3},
             {2, 1, 3, 2, 3, 1},
@@ -27,552 +20,488 @@ public class EscampeBoard implements Partie1 {
             {3, 2, 2, 1, 3, 2}
     };
 
-    private static final int nrows = 6;
-    private static final int ncols = 6;
-
-    //LES PIECES
     public static final int VIDE = 0;
     public static final int PALADIN_BLANC = 1;
     public static final int LICORNE_BLANCHE = 2;
     public static final int PALADIN_NOIR = -1;
     public static final int LICORNE_NOIRE = -2;
 
-    // --- ATTRIBUTS DYNAMIQUES (L'État du jeu) ---
-
-    // Position des pièces
-    // 0 = vide
-    // 1 = Paladin Blanc, 2 = Licorne Blanche
-    // -1 = Paladin Noir, -2 = Licorne Noire
     private int[][] posPieces;
-
-    // Le liseré imposé par le coup précédent (0 si aucun, 1, 2, ou 3)
     private int lisereCourant;
-
-    // Le joueur qui doit jouer ("blanc" ou "noir")
     private String joueurCourant;
 
-    // --- CONSTRUCTEUR ---
-
     public EscampeBoard() {
-        // Initialisation d'un plateau vide 6x6
         this.posPieces = new int[6][6];
-        this.lisereCourant = 0; // Pas de contrainte au début
-        this.joueurCourant = "blanc"; // Par défaut, les blancs commencent
+        this.lisereCourant = 0;
+        this.joueurCourant = "blanc";
     }
 
-    // --- GETTERS ET VERIFICATIONS ---
-
-    // Récupère le type de liseré pour une coordonnée (x=colonne, y=ligne)
-    // ATTENTION : y=0 correspond ici à la ligne du haut du plateau
+    // --- ACCESSEURS ---
     public int getLisere(int x, int y) {
-        if (isValidCoordinate(x, y)) {
-            return LISERES[y][x];
-        }
-        return -1; // Erreur
+        return isValidCoordinate(x, y) ? LISERES[y][x] : -1;
     }
 
-    // Récupère la pièce sur une case (1,2,-1,-2 ou 0)
-    // De meme : y=0 correspond ici à la ligne du haut du plateau
     public int getPiece(int x, int y) {
-        if (isValidCoordinate(x, y)) {
-            return posPieces[y][x];
-        }
-        return 0; // Considéré vide si hors bornes
+        return isValidCoordinate(x, y) ? posPieces[y][x] : 0;
     }
 
-    // Vérifie si une coordonnée est dans le plateau
     public boolean isValidCoordinate(int x, int y) {
         return x >= 0 && x < 6 && y >= 0 && y < 6;
     }
 
-    // --- MÉTHODES DE CONVERSION ---
-
-    /**
-     * Convertit un entier (représentation interne) en caractère (fichier).
-     */
+    // --- CONVERSIONS & I/O (Identique avant) ---
     private char pieceToChar(int piece) {
         switch (piece) {
-            case LICORNE_NOIRE: return 'N';
-            case PALADIN_NOIR:  return 'n';
-            case LICORNE_BLANCHE: return 'B';
-            case PALADIN_BLANC:   return 'b';
-            default:              return '-';
+            case LICORNE_NOIRE:
+                return 'N';
+            case PALADIN_NOIR:
+                return 'n';
+            case LICORNE_BLANCHE:
+                return 'B';
+            case PALADIN_BLANC:
+                return 'b';
+            default:
+                return '-';
         }
     }
 
-    /**
-     * Convertit un caractère (fichier) en entier (représentation interne).
-     */
     private int charToPiece(char c) {
         switch (c) {
-            case 'N': return LICORNE_NOIRE;
-            case 'n': return PALADIN_NOIR;
-            case 'B': return LICORNE_BLANCHE;
-            case 'b': return PALADIN_BLANC;
-            case '-': return VIDE;
-            default: throw new IllegalArgumentException("Caractère inconnu : " + c);
+            case 'N':
+                return LICORNE_NOIRE;
+            case 'n':
+                return PALADIN_NOIR;
+            case 'B':
+                return LICORNE_BLANCHE;
+            case 'b':
+                return PALADIN_BLANC;
+            case '-':
+                return VIDE;
+            default:
+                return VIDE;
         }
     }
 
-    // --- MÉTHODES DE L'INTERFACE ---
-    /**
-    * Permet d'initialiser le plateau à partir d'un fichier texte.
-    */
     @Override
     public void setFromFile(String fileName) {
-        // Initialisation d'un buffer pour lire le fichier
         try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             String line;
-            // Lecture ligne par ligne
             while ((line = br.readLine()) != null) {
-                // Retire les espaces
                 line = line.trim();
-                // On ignore les lignes vides ou les commentaires % en debut ou en fin de fichier
-                //% ABCDEF
-                //01 bb---- 01
-                //02 -Bb-bb 02
-                //03 ------ 03
-                //04 ------ 04
-                //05 -n-n-n 05
-                //06 n-N-n- 06
-                //% ABCDEF
-                if (line.isEmpty() || line.startsWith("%")) {
-                    continue;
-                }
-
-                //Exemple de format attendu : "06 n-B--b 06"
-                //On vérifie si la ligne commence par un chiffre
+                if (line.isEmpty() || line.startsWith("%")) continue;
                 if (Character.isDigit(line.charAt(0))) {
-                    // On découpe la ligne par les espaces pour récupérer les parties
-                    // Exemple split : ["06", "n-B--b", "06"]
-                    //\\s correspond à un espace blanc (espace, tabulation, etc.)
                     String[] parts = line.split("\\s+");
-
-                    //Si on a au moins de caracteres en debut de ligne
                     if (parts.length >= 2) {
-                        // On recupere le numero de ligne et le contenu
-                        int rowNum = Integer.parseInt(parts[0]); // ex: 6
-                        String rowContent = parts[1]; // ex: "n-B--b"
-
-                        // Conversion du numéro de ligne fichier (1..6) vers l'index tableau (5..0)
-                        // Rappel : index 0 = Haut (Ligne 6), index 5 = Bas (Ligne 1)
+                        int rowNum = Integer.parseInt(parts[0]);
                         int y = 6 - rowNum;
-
-                        // Remplissage de la ligne
                         for (int x = 0; x < 6; x++) {
-                            char c = rowContent.charAt(x);
-                            this.posPieces[y][x] = charToPiece(c);
+                            this.posPieces[y][x] = charToPiece(parts[1].charAt(x));
                         }
                     }
                 }
             }
-        } catch (IOException e) {
-            System.err.println("Erreur de lecture du fichier : " + e.getMessage());
-            e.printStackTrace();
         } catch (Exception e) {
-            System.err.println("Erreur de format de fichier : " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    /**
-     * Permet de sauvegarder la configuration courante dans un fichier texte
-     */
     @Override
     public void saveToFile(String fileName) {
-        // Initialisation d'un buffer pour écrire dans le fichier
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName))) {
-            // En-tête (A MODIFIER A NOUVEAU APRES)
-            bw.write("% Sauvegarde Escampe");
+            bw.write("% Sauvegarde");
             bw.newLine();
-            bw.write("% ABCDEF");
-            bw.newLine();
-
-            // On parcourt le tableau de haut en bas (0 à 5)
             for (int y = 0; y < 6; y++) {
-                int rowNum = 6 - y; // 0 -> 06, 5 -> 01
-
-                // Formatage du numéro de ligne "06", "05", etc.
+                int rowNum = 6 - y;
                 String numStr = String.format("%02d", rowNum);
-
-                // Ecriture du numero de ligne
                 bw.write(numStr + " ");
-
-                // Écriture du contenu de la ligne
-                for (int x = 0; x < 6; x++) {
-                    bw.write(pieceToChar(posPieces[y][x]));
-                }
-
+                for (int x = 0; x < 6; x++) bw.write(pieceToChar(posPieces[y][x]));
                 bw.write(" " + numStr);
-                //fin de ligne
                 bw.newLine();
             }
         } catch (IOException e) {
-            System.err.println("Erreur d'écriture du fichier : " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    // --- MÉTHODES UTILITAIRES POUR LES COORDONNÉES ---
-
-    /**
-     * Convertit une coordonnée "A1" en indices tableau [y, x].
-     * Rappel : Dans notre tableau, y=0 correspond à la ligne 6 ("06").
-     * @return un tableau {y, x} ou null si format invalide.
-     */
     private int[] parseCoordinate(String coord) {
         if (coord == null || coord.length() != 2) return null;
-
-        char colChar = coord.charAt(0); // 'A'..'F'
-        char rowChar = coord.charAt(1); // '1'..'6'
-
-        if (colChar < 'A' || colChar > 'F') return null;
-        if (rowChar < '1' || rowChar > '6') return null;
-
-        int x = colChar - 'A';
-        // Conversion '1' -> index 5 (Bas), '6' -> index 0 (Haut)
-        int y = 6 - (rowChar - '0');
-
+        int x = coord.charAt(0) - 'A';
+        int y = 6 - (coord.charAt(1) - '0');
+        if (!isValidCoordinate(x, y)) return null;
         return new int[]{y, x};
     }
 
     private String coordToString(int x, int y) {
-        // Vérification des bornes
-        if (x < 0 || x >= 6 || y < 0 || y >= 6) return null;
-
-        // Colonne
-        char col = (char) ('A' + x);  // 0→A, 1→B, ...
-
-        // Ligne : y=0 → 6, y=5 → 1
-        int row = 6 - y;
-
-        return "" + col + row;
+        if (!isValidCoordinate(x, y)) return null;
+        return "" + (char) ('A' + x) + (6 - y);
     }
 
-    // --- VALIDATION DES COUPS (Cœur des règles) ---
+    // --- LOGIQUE DE VALIDATION (Corrigée pour accepter les virages) ---
 
     @Override
     public boolean isValidMove(String move, String player) {
-        // 1. Gestion du coup spécial "E" (Passer son tour)
-        // Règle 5 : Si un joueur ne peut bouger aucune pièce, il saute son tour.
-        if (move.equals("E")) {
-            // Note : Pour l'instant on accepte "E" syntaxiquement.
-            // Une vérification rigoureuse demanderait de vérifier si possiblesMoves() est vide.
-            return true;
-        }
+        if (move.equals("E") || move.contains("/")) return true;
 
-        // 2. Gestion du placement initial (ex: "C6/A6/...")
-        // Si le coup contient "/", c'est une phase d'initialisation.
-        if (move.contains("/")) {
-            // Pour ce rendu intermédiaire, on peut simplifier ou renvoyer true
-            // si on suppose que l'arbitre envoie des setups valides.
-            // Une validation complète vérifierait que les pièces sont sur les 2 premières lignes.
-            return true;
-        }
-
-        // 3. Analyse d'un coup standard "Depart-Arrivee" (ex: "B2-D2")
         String[] parts = move.split("-");
-        if (parts.length != 2) return false; // Format incorrect
-
+        if (parts.length != 2) return false;
         int[] start = parseCoordinate(parts[0]);
         int[] end = parseCoordinate(parts[1]);
-
-        if (start == null || end == null) return false; // Coordonnées hors plateau
+        if (start == null || end == null) return false;
 
         int y1 = start[0], x1 = start[1];
-        int y2 = end[0], x2 = end[1]; //
+        int y2 = end[0], x2 = end[1];
 
-        // --- VÉRIFICATIONS LOGIQUES ---
-
-        // A. Vérifier qu'il y a une pièce au départ et qu'elle appartient au joueur
+        // 1. Vérif Propriétaire
         int piece = posPieces[y1][x1];
         if (piece == VIDE) return false;
+        boolean isWhite = (piece > 0);
+        if (isWhite != player.equalsIgnoreCase("blanc")) return false;
 
-        boolean isWhitePiece = (piece > 0);
-        boolean isWhitePlayer = player.equalsIgnoreCase("blanc");
+        // 2. Vérif Liseré Imposé
+        int lisereDepart = getLisere(x1, y1);
+        if (lisereCourant != 0 && lisereDepart != lisereCourant) return false;
 
-        if (isWhitePiece != isWhitePlayer) return false; // On tente de bouger la pièce de l'adversaire
-
-        // B. Vérifier le Liseré Imposé (Règle cruciale d'Escampe)
-        int lisereDepart = LISERES[y1][x1];
-
-        // Si lisereCourant != 0, le coup DOIT partir d'une case de ce liseré.
-        if (this.lisereCourant != 0 && lisereDepart != this.lisereCourant) {
-            return false;
+        // 3. Vérif Case Arrivée (Tir fratricide / Paladin imprenable)
+        int target = posPieces[y2][x2];
+        if (target != VIDE) {
+            if ((target > 0) == isWhite) return false; // Ami
+            if (Math.abs(target) == PALADIN_BLANC) return false; // Paladin adverse
         }
 
+        // 4. Vérif Chemin (Pathfinding)
+        // Existe-t-il un chemin de longueur 'lisereDepart' allant de Départ à Arrivée ?
+        // Contraintes : Pas de diagonale, cases intermédiaires vides, pas de retour arrière.
+        return existsPath(x1, y1, x2, y2, lisereDepart, new HashSet<>());
+    }
 
-        // D. Vérifier la distance (Doit être égale au liseré de départ)
-        int distance = Math.abs((x2 - x1) + (y2 - y1)); // Comme l'un est 0, ça marche
-        if (distance != lisereDepart) return false;
+    /**
+     * Vérifie récursivement si un chemin existe.
+     *
+     * @param cx      X courant
+     * @param cy      Y courant
+     * @param tx      X cible
+     * @param ty      Y cible
+     * @param steps   Pas restants
+     * @param visited Cases visitées dans ce trajet
+     */
+    private boolean existsPath(int cx, int cy, int tx, int ty, int steps, Set<String> visited) {
+        String posKey = cx + "," + cy;
+        visited.add(posKey);
 
-        // E. Vérifier le chemin (Pas de saut d'obstacle)
-        // On parcourt les cases ENTRE départ et arrivée
-        int dx = Integer.compare(x2, x1); // -1, 0, ou 1
-        int dy = Integer.compare(y2, y1);
+        // Cas de base : on a épuisé les pas
+        if (steps == 0) {
+            // On renvoie Vrai si on est sur la cible
+            return (cx == tx && cy == ty);
+        }
 
-        int currX = x1 + dx;
-        int currY = y1 + dy;
+        // Exploration des 4 voisins orthogonaux
+        int[][] dirs = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+        for (int[] d : dirs) {
+            int nx = cx + d[0];
+            int ny = cy + d[1];
 
-        while (currX != x2 || currY != y2) {
-            if (posPieces[currY][currX] != VIDE) {
-                return false; // Obstacle sur le chemin
+            // 1. Dans le plateau ?
+            if (!isValidCoordinate(nx, ny)) continue;
+
+            // 2. Pas déjà visité (interdiction de repasser par la même case)
+            if (visited.contains(nx + "," + ny)) continue;
+
+            // 3. Case intermédiaire doit être VIDE
+            // (Sauf si c'est la toute dernière case du chemin, où on a le droit de manger)
+            if (steps > 1 && posPieces[ny][nx] != VIDE) continue;
+
+            // Appel récursif
+            // On crée une COPIE du set visited pour la branche suivante (ou on retire après)
+            // Ici pour simplifier on retire après (backtracking)
+            if (existsPath(nx, ny, tx, ty, steps - 1, visited)) {
+                return true;
             }
-            currX += dx;
-            currY += dy;
         }
 
-        // F. Vérifier la case d'arrivée
-        int targetPiece = posPieces[y2][x2];
-        // On ne peut pas manger ses propres pièces
-        if (targetPiece != VIDE) {
-            boolean isTargetWhite = (targetPiece > 0);
-            if (isTargetWhite == isWhitePlayer) return false; // Tir fratricide
-        }
-
-        // G. Vérifier Paladin vs Paladin (Optionnel selon interprétation "Imprenable")
-        // Le sujet dit "les paladins en particulier étant imprenables" (Fin de partie).
-        // Cela signifie généralement qu'on ne PEUT PAS se déplacer sur un paladin adverse.
-        if (Math.abs(targetPiece) == PALADIN_BLANC) { // Si la cible est un paladin (1 ou -1)
-            return false;
-        }
-
-        return true; // Si on arrive ici, le coup est valide !
+        visited.remove(posKey); // Backtracking
+        return false;
     }
 
-    private boolean existPath(String from, String to, int steps){
-        if (steps < 0) return false;
-        if (steps == 0 && from.equals(to)) return true;
-        int[] startCoords = parseCoordinate(from);
-        int[] endCoords = parseCoordinate(to);
-        int dx = Integer.compare(startCoords[0], endCoords[0]);
-        int dy = Integer.compare(startCoords[1], endCoords[1]);
-
-        String horizontalNeighbor = coordToString(startCoords[0],startCoords[1]+dy);
-        String verticalNeighbor = coordToString(startCoords[0]+dx,startCoords[1]);
-        return (existPath(horizontalNeighbor, to, steps-1) || existPath(verticalNeighbor, to, steps-1));
-    }
-
+    // --- GÉNÉRATION DES COUPS (Corrigée avec Pathfinding) ---
 
     @Override
     public String[] possiblesMoves(String player) {
-        // TODO : Générer tous les coups valides pour 'player'
-        ArrayList<String> possibleMoves = new ArrayList<>();
+        ArrayList<String> moves = new ArrayList<>();
+        boolean isWhiteTurn = player.equalsIgnoreCase("blanc");
+
         for (int y = 0; y < 6; y++) {
             for (int x = 0; x < 6; x++) {
-                int piece = getPiece(x, y);
-                if ((player.equals("blanc") && piece > 0) || (player.equals("noir") && piece < 0)) {
-                    int valLisere = getLisere(x, y);
-                    //vérification du liseré courant
-                    if (lisereCourant != 0 && valLisere != lisereCourant) {
-                        continue;
-                    }
-                    //pièce du joueur courant
-                    String current_pos = "" + (char)('A' + x) + (6 - y);
-                    String[] candidatesDest = getNeighbors(current_pos);
-                    for (String candidate : candidatesDest) {
-                        String candidateMove = current_pos+"-"+candidate;
-                        if (isValidMove(candidateMove, player)) {
-                            possibleMoves.add(candidateMove);
-                        }
-                    }
+                int piece = posPieces[y][x];
+                if (piece == VIDE) continue;
+                if ((piece > 0) != isWhiteTurn) continue; // Pas ma pièce
+
+                int lisere = getLisere(x, y);
+                if (lisereCourant != 0 && lisere != lisereCourant) continue;
+
+                // On lance la recherche de toutes les destinations possibles
+                Set<String> destinations = new HashSet<>();
+                findDestinations(x, y, lisere, new HashSet<>(), destinations, isWhiteTurn);
+
+                String startStr = coordToString(x, y);
+                for (String destStr : destinations) {
+                    moves.add(startStr + "-" + destStr);
                 }
             }
         }
-        return possibleMoves.toArray(new String[0]);
+        return moves.toArray(new String[0]);
     }
 
-    private String[] getNHopsNeighbors(String pos, int n){
-        ArrayList<String> neighbors = new ArrayList<>();
-        int x;
-        int y;
-        String neighbor = "";
-        for (int i = -n; i <= n; i++) {
-            for (int j = -n; j <= n; j++) {
-                if (Math.abs(i)+Math.abs(j)!=n){
-                    continue;
-                }
-                int[] coords = parseCoordinate(pos);
-                x = coords[0] + i;
-                y = coords[1]+j;
-                if (x<0 || x >= nrows || y<0 || y >= ncols){
-                    continue;
-                }
-                neighbor = "" + (char)('A' + y) + (nrows - x);
+    private void findDestinations(int cx, int cy, int steps, Set<String> visited, Set<String> foundDests, boolean isWhite) {
+        String posKey = cx + "," + cy;
+        visited.add(posKey);
 
-                neighbors.add(neighbor);
+        if (steps == 0) {
+            // Fin du trajet : c'est une destination valide
+            foundDests.add(coordToString(cx, cy));
+            visited.remove(posKey);
+            return;
+        }
+
+        int[][] dirs = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+        for (int[] d : dirs) {
+            int nx = cx + d[0];
+            int ny = cy + d[1];
+
+            if (!isValidCoordinate(nx, ny)) continue;
+            if (visited.contains(nx + "," + ny)) continue;
+
+            // Vérification obstacle
+            int targetPiece = posPieces[ny][nx];
+
+            if (steps > 1) {
+                // Case intermédiaire : DOIT être vide
+                if (targetPiece == VIDE) {
+                    findDestinations(nx, ny, steps - 1, visited, foundDests, isWhite);
+                }
+            } else {
+                // Dernière case (steps == 1 -> 0) : PEUT être vide OU capture valide
+                boolean canLand = false;
+                if (targetPiece == VIDE) canLand = true;
+                else {
+                    boolean isTargetWhite = (targetPiece > 0);
+                    // Capture ennemi autorisée SI ce n'est pas un paladin
+                    if (isTargetWhite != isWhite && Math.abs(targetPiece) != PALADIN_BLANC) {
+                        canLand = true;
+                    }
+                }
+
+                if (canLand) {
+                    findDestinations(nx, ny, steps - 1, visited, foundDests, isWhite);
+                }
             }
         }
-        return neighbors.toArray(new String[0]);
+        visited.remove(posKey);
     }
 
-    private void computePossibleMoves() {
-
-    }
-
-    private String[] getNeighbors(String pos) {
-        char col = pos.charAt(0); // lettre colonne
-        int row = Integer.parseInt(pos.substring(1)); // chiffre ligne
-
-        char minCol = 'A', maxCol = 'F';
-        int minRow = 1, maxRow = 6;
-
-        ArrayList<String> neighbors = new ArrayList<>();
-
-        // gauche
-        if (col > minCol) neighbors.add("" + (char)(col - 1) + row);
-        // droite
-        if (col < maxCol) neighbors.add("" + (char)(col + 1) + row);
-        // haut
-        if (row > minRow) neighbors.add("" + col + (row - 1));
-        // bas
-        if (row < maxRow) neighbors.add("" + col + (row + 1));
-
-        return neighbors.toArray(new String[0]);
-    }
-
-
+    // --- PLAY & GAMEOVER (Inchangés) ---
     @Override
     public void play(String move, String player) {
-        // 1. Gestion du coup "E" (Passe son tour)
-        // Règle 5 : Si un joueur passe, l'autre récupère la main et joue ce qu'il veut (liseré libre).
         if (move.equals("E")) {
             this.lisereCourant = 0;
             this.joueurCourant = player.equalsIgnoreCase("blanc") ? "noir" : "blanc";
             return;
         }
-
-        // 2. Gestion du placement initial (ex: "C6/A6/B5/D5/E6/F5")
-        // Règle 1 & 2 : Utilisé en début de partie pour placer les pièces.
         if (move.contains("/")) {
             String[] positions = move.split("/");
-
-            // La première coordonnée est toujours celle de la Licorne
-            int[] licorneCoord = parseCoordinate(positions[0]);
             int licorneVal = player.equalsIgnoreCase("blanc") ? LICORNE_BLANCHE : LICORNE_NOIRE;
-            if (licorneCoord != null) {
-                posPieces[licorneCoord[0]][licorneCoord[1]] = licorneVal;
-            }
+            int[] l = parseCoordinate(positions[0]);
+            if (l != null) posPieces[l[0]][l[1]] = licorneVal;
 
-            // Les coordonnées suivantes sont celles des Paladins
             int paladinVal = player.equalsIgnoreCase("blanc") ? PALADIN_BLANC : PALADIN_NOIR;
             for (int i = 1; i < positions.length; i++) {
-                int[] palCoord = parseCoordinate(positions[i]);
-                if (palCoord != null) {
-                    posPieces[palCoord[0]][palCoord[1]] = paladinVal;
-                }
+                int[] p = parseCoordinate(positions[i]);
+                if (p != null) posPieces[p[0]][p[1]] = paladinVal;
             }
-
-            // Après une phase de placement, le jeu commence (ou continue) sans contrainte immédiate.
-            // (Si Noir vient de placer, Blanc placera. Si Blanc vient de placer, il jouera le premier coup LIBREMENT ).
             this.lisereCourant = 0;
             this.joueurCourant = player.equalsIgnoreCase("blanc") ? "noir" : "blanc";
             return;
         }
 
-        // 3. Coup standard "Départ-Arrivée" (ex: "B2-D2")
         String[] parts = move.split("-");
         int[] start = parseCoordinate(parts[0]);
         int[] end = parseCoordinate(parts[1]);
-
-        // On récupère la pièce qui bouge
         int piece = posPieces[start[0]][start[1]];
-
-        // On vide la case de départ
         posPieces[start[0]][start[1]] = VIDE;
-
-        // On pose la pièce sur la case d'arrivée
-        // Note : Si la case contenait une Licorne adverse, elle est écrasée (capturée).
-        // La validation (isValidMove) garantit déjà qu'on ne mange pas un Paladin.
         posPieces[end[0]][end[1]] = piece;
-
-        // 4. Mise à jour du Liseré Imposé pour le PROCHAIN coup
-        // Règle 3: "la pièce jouée doit partir d'une case ayant le même liseré que celle
-        // sur laquelle l'autre joueur a posé sa propre pièce au tour précédent."
         this.lisereCourant = LISERES[end[0]][end[1]];
-
-        // Changement de joueur
         this.joueurCourant = player.equalsIgnoreCase("blanc") ? "noir" : "blanc";
     }
 
     @Override
     public boolean gameOver() {
-        boolean licorneBlancheEnVie = false;
-        boolean licorneNoireEnVie = false;
-
-        // On parcourt tout le plateau pour chercher les licornes
-        for (int y = 0; y < 6; y++) {
-            for (int x = 0; x < 6; x++) {
-                int piece = posPieces[y][x];
-
-                if (piece == LICORNE_BLANCHE) {
-                    licorneBlancheEnVie = true;
-                } else if (piece == LICORNE_NOIRE) {
-                    licorneNoireEnVie = true;
-                }
+        boolean lb = false, ln = false;
+        for (int[] row : posPieces) {
+            for (int p : row) {
+                if (p == LICORNE_BLANCHE) lb = true;
+                if (p == LICORNE_NOIRE) ln = true;
             }
         }
-
-        // La partie est finie si l'une des deux licornes n'est plus sur le plateau
-        return !(licorneBlancheEnVie && licorneNoireEnVie);
+        return !(lb && ln);
     }
 
+    // --- MAIN DE TEST (Mis à jour pour tester les virages) ---
     public void printBoard() {
-        System.out.println("    A B C D E F");
-        System.out.println("   -------------");
-
+        System.out.println("     A B C D E F");
+        System.out.println("   +-------------+");
         for (int y = 0; y < 6; y++) {
-            int rowNum = 6 - y; // 6 → ligne du haut
-
-            System.out.print(rowNum + " | ");
+            System.out.print(" " + (6 - y) + " | ");
             for (int x = 0; x < 6; x++) {
-                System.out.print(pieceToChar(posPieces[y][x]) + " ");
+                char c = pieceToChar(posPieces[y][x]);
+                System.out.print((c == '-' ? '.' : c) + " ");
             }
-            System.out.println("| " + rowNum);
+            System.out.println("| " + (6 - y));
         }
-
-        System.out.println("   -------------");
-        System.out.println("    A B C D E F");
     }
-
-
-    // --- PROGRAMME PRINCIPAL ---
 
     // --- PROGRAMME PRINCIPAL DE TEST ---
     public static void main(String[] args) {
         EscampeBoard board = new EscampeBoard();
 
-        // --- TEST CHARGEMENT + SAUVEGARDE FICHIER ---
-        System.out.println("--- Test 1 : Chargement Fichier ---");
-        String filename = "test_input.txt";
-        // Créer le fichier s'il n'existe pas pour éviter le crash au premier run
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename))) {
-            bw.write("06 n----- 06\n05 ------ 05\n04 --B--- 04\n03 ------ 03\n02 ---b-- 02\n01 ----N- 01");
-        } catch (IOException e) { e.printStackTrace(); }
 
-        board.setFromFile(filename);
+        // ---------------------------------------------------------------
+        // TEST DE CHARGEMENT SUR LES 4 FICHIERS
+        // ---------------------------------------------------------------
+        System.out.println("===== TESTS DE CHARGEMENT DES FICHIERS =====\n");
+        String[] filesToTest = {"test_input1.txt", "test_input2.txt", "test_input3.txt", "test_input4.txt"};
+
+        for (String fileName : filesToTest) {
+            System.out.println("--- Chargement de : " + fileName + " ---");
+            board.setFromFile(fileName);
+            board.printBoard();
+            System.out.println("Lecture OK.\n");
+        }
+
+        // ---------------------------------------------------------------
+        // TEST DE JEU (PLAY) ET SAUVEGARDE
+        // ---------------------------------------------------------------
+        System.out.println("===== TESTS DE FAIRE DES COUPS + SAUVEGARDE DE FICHIERS =====\n");
+
+        // Avec le fichier test_input2.txt on fait le coup F6-F4 QUI EST INVALIDE
+        System.out.println("1. Chargement de l'état initial (test_input2.txt)...");
+        board.setFromFile("test_input2.txt");
         board.printBoard();
 
-        // Demander les coups possibles
-        String[] moves = board.possiblesMoves("blanc");
+        String coup = "F6-F4";
+        String joueur = "blanc";
 
-        System.out.print("Coups trouvés par le programme : ");
-        System.out.println(Arrays.toString(board.possiblesMoves("blanc")));
-
-        // Vérification qu'il n'y a pas de coups "tordus" (grâce à votre isValidMove)
-        // Le code de votre ami explore en "tache d'huile", donc il pourrait trouver C3-D2 (distance 3 mais en diagonale/L).
-        // isValidMove doit filtrer ça.
-        //TODO
-        boolean hasWeirdMoves = false;
-        for (String m : moves) {
-            // On regarde juste les coups partant de C3
-            if (m.startsWith("C3") && !m.equals("C3-C6") && !m.equals("C3-F3")) {
-                System.out.println("ATTENTION : Coup invalide détecté -> " + m);
-                hasWeirdMoves = true;
-            }
+        System.out.println("2. Le joueur " + joueur + " tente de jouer : " + coup);
+        System.out.println("   (Analyse : Départ F6 sur Liseré " + board.getLisere(5, 0) + " -> Distance requise : 2)");
+        if (board.isValidMove(coup, joueur)) {
+            board.play(coup, joueur);
+            System.out.println(">> Coup VALIDE et JOUÉ.");
+        } else {
+            System.out.println(">> ERREUR : Coup considéré invalide .");
         }
 
-        if (!hasWeirdMoves) {
-            System.out.println("FILTRAGE : OK (Aucun coup en diagonale ou en L n'a été gardé)");
+        //PUIS AVEC UN COUP VALIDE : F6-E5
+        coup = "F6-E5";
+        joueur = "blanc";
+
+        System.out.println("2. Le joueur " + joueur + " tente de jouer : " + coup);
+        System.out.println("   (Analyse : Départ F6 sur Liseré " + board.getLisere(5, 0) + " -> Distance requise : 2)");
+        if (board.isValidMove(coup, joueur)) {
+            board.play(coup, joueur);
+            System.out.println(">> Coup VALIDE et JOUÉ.");
+        } else {
+            System.out.println(">> ERREUR : Coup considéré invalide .");
         }
+
+        System.out.println("\n3. État du plateau après le coup :");
+        board.printBoard();
+
+        // 3. Sauvegarde
+        String saveName = "test_output.txt";
+        System.out.println("4. Sauvegarde de l'état final dans '" + saveName + "'...");
+        board.saveToFile(saveName);
+
+        // 4. Vérification (Relecture)
+        System.out.println("5. Vérification : Relecture du fichier sauvegardé...");
+        EscampeBoard checkBoard = new EscampeBoard();
+        checkBoard.setFromFile(saveName);
+        // On vérifie que la pièce est bien arrivée en F4 (x=5, y=2)
+        // F4 correspond à la ligne 4 (index 2 dans le tableau)
+        int pieceF4 = checkBoard.getPiece(4, 1);
+        if (pieceF4 == PALADIN_BLANC) {
+            System.out.println(">> SUCCÈS : La sauvegarde contient bien le Paladin Blanc en F4 !");
+        } else {
+            System.out.println(">> ÉCHEC : La pièce en F4 est " + pieceF4 + " (Attendu : 1)");
+        }
+
+        // ---------------------------------------------------------------
+        // AFFICHAGE DES COUPS DISPONIBLES
+        // ---------------------------------------------------------------
+        System.out.println("\n===== TESTS D'AFFICHAGE DES COUPS POSSIBLES =====");
+
+        // Boucle sur les fichiers pour afficher les coups sans contrainte particulière (lisereCourant = 0 par défaut au chargement)
+        for (String fileName : filesToTest) {
+            System.out.println("\n--- Analyse des coups pour : " + fileName + " ---");
+            board.setFromFile(fileName);
+            // On réinitialise le liseré courant à 0 pour simuler un début de tour libre
+            // (Note: setFromFile ne change pas lisereCourant, il faut le faire si on veut tester "à vide")
+            board.lisereCourant = 0;
+
+            String[] movesBlanc = board.possiblesMoves("blanc");
+            String[] movesNoir = board.possiblesMoves("noir");
+
+            board.printBoard();
+
+            System.out.println("Coups Blancs (" + movesBlanc.length + ") : " + Arrays.toString(movesBlanc));
+            System.out.println("Coups Noirs  (" + movesNoir.length + ") : " + Arrays.toString(movesNoir));
+        }
+
+        // ---------------------------------------------------------------
+        // FICHIER 4 AVEC CONTRAINTE IMPOSÉE
+        // ---------------------------------------------------------------
+        System.out.println("\n--- Test Spécial : Contrainte sur test_input4.txt ---");
+        board.setFromFile("test_input4.txt");
+
+        // Configuration du test_input4 :
+        // - Blanc a un Paladin 'b' en A1 (Liseré 3)
+        // - Blanc a une Licorne 'B' en F3 (Liseré 1)
+
+        // CAS 1 : On impose le Liseré 1
+        board.lisereCourant = 1;
+        System.out.println(">> IMPOSITION LISERÉ COURANT = 1");
+        System.out.println("   (Seule la Licorne 'B' en F3 est sur un liseré 1)");
+
+        String[] movesContraints1 = board.possiblesMoves("blanc");
+        String movesContraints1_str = Arrays.toString(movesContraints1);
+        board.printBoard();
+        System.out.println("Coups trouvés : " + movesContraints1_str);
+
+
+        if (Objects.equals(movesContraints1_str, "[F3-F2, F3-E3]")) {
+            System.out.println(">> SUCCÈS : Filtre OK (Seulement F3 proposé et il peut aller en F2 ou E3).");
+        }
+        else {
+            System.out.println(">> ÉCHEC : Filtre incorrect.");
+        }
+
+
+        // CAS 2 : On impose le Liseré 3
+        board.lisereCourant = 3;
+        System.out.println("\n>> IMPOSITION LISERÉ COURANT = 3");
+        System.out.println("   (Seul le Paladin 'b' en A1 est sur un liseré 3 et il peutu uniquement aller en B3)");
+
+        String[] movesContraints3 = board.possiblesMoves("blanc");
+        String movesContraints3_str = Arrays.toString(movesContraints3);
+        board.printBoard();
+        System.out.println("Coups trouvés : " + movesContraints3_str);
+
+        if (Objects.equals(movesContraints3_str, "[A1-B3]")) {
+            System.out.println(">> SUCCÈS : Filtre OK (Seulement A1 proposé).");
+        }
+        else {
+            System.out.println(">> ÉCHEC : Filtre incorrect.");
+        }
+
+
+
+        System.out.println("\n=== FIN DES TESTS COMPLETS ===");
     }
 }

@@ -1,4 +1,4 @@
-package games.ecampe;
+package escampe;
 
 import iialib.games.model.escampe.Partie1;
 import java.io.BufferedReader;

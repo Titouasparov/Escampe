@@ -8,7 +8,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
-public class EscampeBoard implements Partie1 {
+
+import iialib.games.model.IBoard;
+import iialib.games.model.Score;
+import java.util.ArrayList;
+
+public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, EscampeBoard> {
 
     // --- CONSTANTES ---
     //tableau des liserés
@@ -38,6 +43,17 @@ public class EscampeBoard implements Partie1 {
         this.posPieces = new int[6][6];
         this.lisereCourant = 0;
         this.joueurCourant = "blanc";
+    }
+
+    //Constructeur de copie pour l'IA
+    // pour simuler des coups sans modifier le plateau original
+    public EscampeBoard(EscampeBoard autre) {
+        this.posPieces = new int[6][6];
+        for (int y = 0; y < 6; y++) {
+            System.arraycopy(autre.posPieces[y], 0, this.posPieces[y], 0, 6);
+        }
+        this.lisereCourant = autre.lisereCourant;
+        this.joueurCourant = autre.joueurCourant;
     }
 
     // --- GETTER ---
@@ -442,6 +458,52 @@ public class EscampeBoard implements Partie1 {
             }
             System.out.println("| " + (6 - y));
         }
+    }
+
+
+    // ==========================================================
+    // IMPLEMENTATION DE L'INTERFACE IBOARD (Pour l'IA)
+    // ==========================================================
+
+    @Override
+    public ArrayList<EscampeMove> possibleMoves(EscampeRole role) {
+        ArrayList<EscampeMove> moves = new ArrayList<>();
+        // On utilise votre méthode existante (possiblesMoves avec 's' à la fin)
+        String[] movesStr = this.possiblesMoves(role.getName());
+
+        for (String s : movesStr) {
+            moves.add(new EscampeMove(s));
+        }
+        return moves;
+    }
+
+    @Override
+    public EscampeBoard play(EscampeMove move, EscampeRole role) {
+        // 1. On clone le plateau actuel pour ne pas modifier l'état réel
+        EscampeBoard copy = new EscampeBoard(this);
+
+        // 2. On joue le coup sur la copie
+        copy.play(move.moveStr, role.getName());
+
+        // 3. On renvoie la copie modifiée (nouvel état)
+        return copy;
+    }
+
+    @Override
+    public boolean isValidMove(EscampeMove move, EscampeRole role) {
+        return isValidMove(move.moveStr, role.getName());
+    }
+
+    @Override
+    public boolean isGameOver() {
+        return gameOver();
+    }
+
+    @Override
+    public ArrayList<Score<EscampeRole>> getScores() {
+        // C'est ici qu'on branchera l'heuristique plus tard.
+        // Pour l'instant, on renvoie une liste vide pour que ça compile.
+        return new ArrayList<>();
     }
 
     // --- PROGRAMME PRINCIPAL DE TEST ---

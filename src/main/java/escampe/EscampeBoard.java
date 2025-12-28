@@ -232,6 +232,8 @@ public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, E
         if (target != VIDE) {
             if ((target > 0) == isWhite) return false; // Ami
             if (Math.abs(target) == PALADIN_BLANC) return false; // Paladin adverse
+            // Si la cible est une licorne (abs == 2) et que l'attaquant n'est pas un paladin (abs != 1)
+            if (Math.abs(target) == 2 && Math.abs(piece) != 1) return false;
         }
 
         // Vérif Chemin
@@ -373,7 +375,10 @@ public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, E
                     boolean isTargetWhite = (targetPiece > 0);
                     // Capture ennemi autorisée SI ce n'est pas un paladin
                     if (isTargetWhite != isWhite && Math.abs(targetPiece) != PALADIN_BLANC) {
-                        canLand = true;
+                        // une licorne ne peut pas capturer une licorne
+                        if (!(Math.abs(targetPiece)==2 && Math.abs(posPieces[cy][cx])!=1)) {
+                            canLand = true;
+                        }
                     }
                 }
 

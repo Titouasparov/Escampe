@@ -66,7 +66,6 @@ public class AlphaBeta<Move extends IMove,Role extends IRole,Board extends IBoar
 
     private int alphaBeta(Board board, int depth, int alpha, int beta, Boolean isMaximizingPlayer) {
         this.nbNodes++;
-
         // Determine current role based on whether this node is maximizing or minimizing
         Role currentRole = isMaximizingPlayer ? playerMaxRole : playerMinRole;
 
@@ -104,5 +103,8 @@ public class AlphaBeta<Move extends IMove,Role extends IRole,Board extends IBoar
             }
             return bestVal;
         }
+    }
+    public void setDepthMax(int depthMax) {
+        this.depthMax = depthMax;
     }
 }

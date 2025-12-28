@@ -3,7 +3,7 @@ package escampe;
 import iialib.games.algs.algorithms.AlphaBeta;
 
 // cette classe permet de définir un joueur pour le jeu d'Escampe
-public class MonJoueur implements IJoueur {
+public class MonJoueurNul implements IJoueur {
 
     // --- Attributs ---
     private EscampeBoard board;
@@ -31,7 +31,7 @@ public class MonJoueur implements IJoueur {
         // Création de l'algo AlphaBeta(RoleJoueur, RoleAdversaire, Heuristique, Profondeur)
         // PROFONDEUR : 4 est un bon début pour tester la rapidité.
         System.out.println(">>> Init IA AlphaBeta (Profondeur 4)...");
-        this.algo = new AlphaBeta<>(monRole, roleAdverse, new EscampeHeuristique(), 4);
+        this.algo = new AlphaBeta<>(monRole, roleAdverse, new EscampeHeuristiqueV1(), 4);
     }
 
     // --- GETTER ---

@@ -17,7 +17,7 @@ public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, E
 
     // --- CONSTANTES ---
     //tableau des liserés
-    private static final int[][] LISERES = {
+    public static final int[][] LISERES = {
             {3, 2, 2, 1, 3, 2}, // Ligne 6 (Haut)
             {1, 3, 1, 3, 1, 2}, // Ligne 5
             {2, 1, 3, 2, 3, 1}, // Ligne 4

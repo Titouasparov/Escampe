@@ -80,7 +80,7 @@ public class MonJoueur implements IJoueur {
         // Phase de Placement
         // L'IA AlphaBeta ne sait pas gérer le placement initial complexe ("A1/B2...")
         if (!aFaitSonPlacement) {
-            coupAJouer = genererPlacement();
+            coupAJouer = EscampePlacementStrategy.getPlacement(this.maCouleurStr);
             this.aFaitSonPlacement = true;
         }
         // Phase de Jeu, notre IA entre en action
